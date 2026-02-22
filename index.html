@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR_GEN // MATRIX_MODE</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --matrix-green: #00FF41;
+            --dark-bg: #0d0d0d;
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%; overflow: hidden;
+            background-color: black; font-family: 'Courier New', Courier, monospace;
+        }
+
+        /* Matrix Rain Canvas */
+        #matrix-canvas {
+            position: fixed; top: 0; left: 0; z-index: -1;
+        }
+
+        .container {
+            background: rgba(13, 13, 13, 0.85);
+            border: 2px solid var(--matrix-green);
+            box-shadow: 0 0 20px var(--matrix-green);
+            padding: 30px; border-radius: 5px;
+            max-width: 450px; width: 90%;
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center; color: var(--matrix-green);
+        }
+
+        h2 { text-transform: uppercase; letter-spacing: 5px; margin-bottom: 20px; }
+
+        .btn-group { display: flex; gap: 5px; margin-bottom: 20px; }
+        button {
+            flex: 1; background: transparent; border: 1px solid var(--matrix-green);
+            color: var(--matrix-green); padding: 8px; cursor: pointer;
+            text-transform: uppercase; font-size: 0.8rem;
+        }
+        button:hover { background: var(--matrix-green); color: black; }
+
+        input {
+            width: 100%; padding: 12px; margin: 10px 0;
+            background: rgba(0, 0, 0, 0.7); border: 1px solid var(--matrix-green);
+            color: var(--matrix-green); box-sizing: border-box;
+            outline: none;
+        }
+
+        #qrcode {
+            background: white; padding: 10px; border-radius: 2px;
+            display: inline-block; margin: 20px 0;
+            box-shadow: 0 0 15px white;
+        }
+
+        #download-btn {
+            display: none; width: 100%; padding: 12px; font-weight: bold;
+            background: var(--matrix-green); color: black; border: none;
+            cursor: pointer; margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="matrix-canvas"></canvas>
+
+<div class="container">
+    <h2>QR_GEN // MODE</h2>
+    
+    <div class="btn-group">
+        <button onclick="setMode('text')">URL/TXT</button>
+        <button onclick="setMode('wifi')">WLAN</button>
+        <button onclick="setMode('vcard')">VCARD</button>
+    </div>
+
+    <div id="inputs">
+        <input type="text" id="main-input" placeholder="> Input data..." autofocus>
+    </div>
+
+    <div id="qrcode"></div>
+    <button id="download-btn" onclick="downloadQR()">[ SYSTEM_DOWNLOAD_PNG ]</button>
+</div>
+
+<script>
+    /* --- MATRIX BACKGROUND LOGIC --- */
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth;
+
+    const characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$+-*/=%\"'#&_(),.;:?!\\|{}<>[]^~";
+    const fontSize = 16;
+    const columns = canvas.width / fontSize;
+    const drops = Array(Math.floor(columns)).fill(1);
+
+    function drawMatrix() {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#0F0"; 
+        ctx.font = fontSize + "px monospace";
+
+        for (let i = 0; i < drops.length; i++) {
+            const text = characters.charAt(Math.floor(Math.random() * characters.length));
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
+        }
+    }
+    setInterval(drawMatrix, 35);
+
+    /* --- QR GENERATOR LOGIC --- */
+    const qrContainer = document.getElementById('qrcode');
+    const downloadBtn = document.getElementById('download-btn');
+    let currentMode = 'text';
+
+    const qr = new QRCode(qrContainer, {
+        width: 250, height: 250,
+        correctLevel: QRCode.CorrectLevel.H
+    });
+
+    function setMode(mode) {
+        currentMode = mode;
+        const container = document.getElementById('inputs');
+        if (mode === 'wifi') {
+            container.innerHTML = `<input type="text" id="ssid" placeholder="> SSID"><input type="password" id="pass" placeholder="> PASSWORD">`;
+        } else if (mode === 'vcard') {
+            container.innerHTML = `<input type="text" id="name" placeholder="> NAME"><input type="text" id="phone" placeholder="> PHONE">`;
+        } else {
+            container.innerHTML = `<input type="text" id="main-input" placeholder="> Input URL/Text...">`;
+        }
+        container.querySelectorAll('input').forEach(i => i.addEventListener('input', generate));
+    }
+
+    function generate() {
+        let value = "";
+        if (currentMode === 'text') {
+            value = document.getElementById('main-input').value;
+        } else if (currentMode === 'wifi') {
+            const s = document.getElementById('ssid').value;
+            const p = document.getElementById('pass').value;
+            value = `WIFI:S:${s};T:WPA;P:${p};;`;
+        } else if (currentMode === 'vcard') {
+            const n = document.getElementById('name').value;
+            const tel = document.getElementById('phone').value;
+            value = `BEGIN:VCARD\nVERSION:3.0\nN:${n}\nTEL:${tel}\nEND:VCARD`;
+        }
+
+        if (value.trim() !== "") {
+            qr.makeCode(value);
+            downloadBtn.style.display = "block";
+        } else {
+            downloadBtn.style.display = "none";
+        }
+    }
+
+    function downloadQR() {
+        const img = qrContainer.querySelector('img');
+        const link = document.createElement('a');
+        link.download = 'matrix_qr.png';
+        link.href = img.src;
+        link.click();
+    }
+
+    document.getElementById('main-input').addEventListener('input', generate);
+    window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+</script>
+</body>
+  </html>
+  
