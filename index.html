@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR_GEN // MATRIX_FIXED</title>
+    <title>QR_GEN // MATRIX_FINAL</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
             --matrix-green: #00FF41;
-            --dark-bg: #0d0d0d;
         }
 
         body, html {
@@ -17,47 +16,51 @@
             font-family: 'Courier New', Courier, monospace;
         }
 
+        /* Sorgt dafür, dass das Canvas wirklich hinten liegt und alles füllt */
         #matrix-canvas {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1;
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: block; z-index: 1;
         }
 
         .container {
-            background: rgba(13, 13, 13, 0.9);
+            background: rgba(0, 0, 0, 0.85);
             border: 2px solid var(--matrix-green);
-            box-shadow: 0 0 20px var(--matrix-green);
-            padding: 25px; border-radius: 5px;
+            box-shadow: 0 0 25px var(--matrix-green);
+            padding: 25px; border-radius: 8px;
             max-width: 400px; width: 85%;
             position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%);
             text-align: center; color: var(--matrix-green);
-            z-index: 10;
+            z-index: 10; /* Höher als das Canvas */
         }
 
-        h2 { text-transform: uppercase; letter-spacing: 3px; font-size: 1.2rem; }
+        h2 { text-transform: uppercase; letter-spacing: 3px; font-size: 1.2rem; margin-top: 0; }
 
         .btn-group { display: flex; gap: 5px; margin-bottom: 15px; }
         button {
             flex: 1; background: transparent; border: 1px solid var(--matrix-green);
             color: var(--matrix-green); padding: 8px; cursor: pointer;
-            text-transform: uppercase; font-size: 0.7rem;
+            text-transform: uppercase; font-size: 0.7rem; transition: 0.2s;
         }
         button:hover { background: var(--matrix-green); color: black; }
 
         input {
-            width: 100%; padding: 10px; margin: 5px 0;
-            background: rgba(0, 0, 0, 0.8); border: 1px solid var(--matrix-green);
+            width: 100%; padding: 12px; margin: 8px 0;
+            background: rgba(0, 0, 0, 0.9); border: 1px solid var(--matrix-green);
             color: var(--matrix-green); box-sizing: border-box; outline: none;
         }
 
         #qrcode {
-            background: white; padding: 10px; border-radius: 2px;
-            display: inline-block; margin: 15px 0; min-height: 128px;
+            background: white; padding: 10px; border-radius: 4px;
+            display: inline-block; margin: 15px 0;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
         }
 
         #download-btn {
             display: none; width: 100%; padding: 12px; font-weight: bold;
             background: var(--matrix-green); color: black; border: none;
-            cursor: pointer; text-transform: uppercase;
+            cursor: pointer; text-transform: uppercase; letter-spacing: 1px;
         }
     </style>
 </head>
@@ -66,7 +69,7 @@
 <canvas id="matrix-canvas"></canvas>
 
 <div class="container">
-    <h2>QR_SYSTEM // ONLINE</h2>
+    <h2>QR_SYSTEM // V3.0</h2>
     
     <div class="btn-group">
         <button onclick="setMode('text')">TXT</button>
@@ -83,46 +86,56 @@
 </div>
 
 <script>
-    /* --- MATRIX RAIN FIXED --- */
+    /* --- MATRIX RAIN - STABILISIERT --- */
     const canvas = document.getElementById('matrix-canvas');
     const ctx = canvas.getContext('2d');
 
     let columns, drops;
     const fontSize = 16;
-    const characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$+-*/=%";
+    const characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$+-*/=%&<>!";
 
-    function initMatrix() {
+    function resizeCanvas() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        columns = canvas.width / fontSize;
-        drops = Array(Math.floor(columns)).fill(1);
+        columns = Math.floor(canvas.width / fontSize);
+        drops = Array(columns).fill(1);
     }
 
     function drawMatrix() {
+        // Erzeugt den Trail-Effekt durch leicht transparentes Schwarz
         ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#00FF41";
+
+        ctx.fillStyle = "#00FF41"; // Matrix Grün
         ctx.font = fontSize + "px monospace";
 
         for (let i = 0; i < drops.length; i++) {
             const text = characters.charAt(Math.floor(Math.random() * characters.length));
+            // Zeichnet das Zeichen
             ctx.fillText(text, i * fontSize, drops[i] * fontSize);
-            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+
+            // Wenn das Zeichen unten ankommt, setze es zufällig wieder nach oben
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
             drops[i]++;
         }
     }
 
-    window.addEventListener('resize', initMatrix);
-    initMatrix();
+    // Initialisierung
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
     setInterval(drawMatrix, 35);
 
-    /* --- QR LOGIC FIXED --- */
+    /* --- QR GENERATOR --- */
     const qrContainer = document.getElementById('qrcode');
     const downloadBtn = document.getElementById('download-btn');
     let currentMode = 'text';
 
+    // Wichtig: QRCode Instanz einmalig anlegen
     const qr = new QRCode(qrContainer, {
-        width: 200, height: 200,
+        width: 200,
+        height: 200,
         correctLevel: QRCode.CorrectLevel.H
     });
 
@@ -130,12 +143,19 @@
         currentMode = mode;
         const container = document.getElementById('inputs');
         if (mode === 'wifi') {
-            container.innerHTML = `<input type="text" id="ssid" placeholder="> SSID"><input type="text" id="pass" placeholder="> PASSWORD">`;
+            container.innerHTML = `
+                <input type="text" id="ssid" placeholder="> SSID">
+                <input type="text" id="pass" placeholder="> PASSWORD">
+            `;
         } else if (mode === 'vcard') {
-            container.innerHTML = `<input type="text" id="name" placeholder="> NAME"><input type="text" id="phone" placeholder="> PHONE">`;
+            container.innerHTML = `
+                <input type="text" id="name" placeholder="> NAME">
+                <input type="text" id="phone" placeholder="> PHONE">
+            `;
         } else {
             container.innerHTML = `<input type="text" id="main-input" placeholder="> Input data...">`;
         }
+        // Event-Listener an die neuen Felder binden
         container.querySelectorAll('input').forEach(i => i.addEventListener('input', generate));
     }
 
@@ -157,30 +177,27 @@
             qr.makeCode(value);
             downloadBtn.style.display = "block";
         } else {
-            qr.clear();
             downloadBtn.style.display = "none";
         }
     }
 
     function downloadQR() {
-        // Sicherer Download-Mechanismus
         const img = qrContainer.querySelector('img');
-        const canvasQR = qrContainer.querySelector('canvas');
+        const canvasElement = qrContainer.querySelector('canvas');
         const link = document.createElement('a');
         link.download = 'matrix_qr.png';
         
-        // Nutze das Bild, falls vorhanden, sonst das Canvas
-        if (img && img.src && img.src.startsWith('data:image')) {
+        // Manche Browser brauchen das Canvas-Fallback, manche das Image-Tag
+        if (img && img.src && img.src.length > 10) {
             link.href = img.src;
-        } else if (canvasQR) {
-            link.href = canvasQR.toDataURL("image/png");
+        } else if (canvasElement) {
+            link.href = canvasElement.toDataURL("image/png");
         }
-        
         link.click();
     }
 
+    // Ersten Listener für Startfeld binden
     document.getElementById('main-input').addEventListener('input', generate);
 </script>
 </body>
-    </html>
-    
+</html>
