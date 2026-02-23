@@ -94,7 +94,14 @@
     <div id="qrcode"></div>
     <button id="download-btn" onclick="downloadQR()">[ SAVE_IMAGE_TO_DISK ]</button>
 </div>
-
+      if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('Service Worker registriert!', reg))
+            .catch(err => console.log('Service Worker Fehler:', err));
+    });
+}
+    
 <script>
     /* --- MATRIX RAIN - STABILISIERT --- */
     const canvas = document.getElementById('matrix-canvas');
